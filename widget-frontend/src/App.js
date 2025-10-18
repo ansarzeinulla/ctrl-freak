@@ -88,7 +88,21 @@ function ChatWidget({ onClose }) {
   // --- ЛОГИКА РАБОТЫ С WEBSOCKET ---
   useEffect(() => {
     socket.current = new WebSocket(WS_URL);
-    socket.current.onopen = () => console.log('WS соединение установлено');
+    socket.current.onopen = () => {
+      console.log('WS соединение установлено');
+      // --- NEW: Send initial message to trigger AI ---
+      // We use a timeout to ensure vacancyId/resumeId have been set from the other useEffect
+      setTimeout(() => {
+        setMessages(prev => {
+          // Only send the initial message if the chat is empty
+          if (prev.length === 0 && vacancyId && resumeId) {
+            console.log("Отправка стартового сообщения для начала диалога с AI");
+            socket.current.send(JSON.stringify({ text: 'start', vacancy_id: vacancyId, resume_id: resumeId }));
+          }
+          return prev;
+        });
+      }, 100); // A small delay is usually sufficient
+    };
 
     socket.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -104,7 +118,7 @@ function ChatWidget({ onClose }) {
 
     socket.current.onclose = () => console.log('WS соединение закрыто');
     return () => socket.current.close();
-  }, []);
+  }, [vacancyId, resumeId]); // Rerun if IDs change (though they shouldn't in this setup)
 
   const sendMessage = () => {
     if (!inputValue.trim() || isFinished) return;
