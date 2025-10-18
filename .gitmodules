@@ -1,0 +1,7 @@
+# Open .gitmodules in a text editor
+nano .gitmodules  # or vim, or code .gitmodules
+
+# Find and DELETE the entire section that looks like this:
+#[submodule "widget-frontend"]
+#	path = widget-frontend
+#	url = <the-url-of-your-widget-frontend-repo>
