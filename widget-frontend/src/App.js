@@ -139,14 +139,20 @@ function ChatWidget({ onClose }) {
   };
 
   return (
-    <Card shadow="xl" p="lg" radius="md" withBorder style={{ width: 350, height: 500, display: 'flex', flexDirection: 'column' }}>
+    <Card
+      shadow="xl"
+      p="lg"
+      radius="md"
+      withBorder
+      style={{ width: 350, height: 500, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+    >
       <Group position="apart" mb="md">
         <Text weight={500}>Чат-поддержка</Text>
         <ActionIcon onClick={onClose}><IconX size={16} /></ActionIcon>
       </Group>
 
-      {/* Область с сообщениями */}
-      <ScrollArea style={{ flex: 1, marginBottom: '10px' }} viewportRef={viewport}>
+      {/* Message Area: The key is to make this a flex item that can shrink and has its own overflow handling. */}
+      <ScrollArea style={{ flex: '1 1 0', minHeight: 0, marginBottom: '10px' }} viewportRef={viewport}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {messages.map((msg, index) => <Message key={index} message={msg} />)}
         </div>

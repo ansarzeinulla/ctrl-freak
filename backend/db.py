@@ -3,9 +3,9 @@ import psycopg2
 # --- Your database credentials ---
 db_params = {
     "database": "remotedb",
-    "user": "remoteuser2",
-    "password": "4444",
-    "host": "100.100.122.40",
+    "user": "postgres",
+    "password": "",
+    "host": "127.0.0.1",
     "port": "5432"
 }
 
