@@ -1,7 +1,7 @@
 // src/App.js
 import { useState, useEffect, useRef } from 'react';
-import { MantineProvider, Card, Text, Button, TextInput, Paper, ActionIcon, Group, ScrollArea } from '@mantine/core';
-import { IconX, IconMessageCircle, IconSend } from '@tabler/icons-react';
+import { MantineProvider, Card, Text, Button, TextInput, Paper, ActionIcon, Group, ScrollArea } from '@mantine/core'; // prettier-ignore
+import { IconX, IconMessageCircle, IconSend, IconArrowUp, IconArrowDown } from '@tabler/icons-react';
 
 const WS_URL = 'ws://localhost:8000/ws';
 
@@ -42,6 +42,16 @@ function ChatWidget({ onClose }) {
     viewport.current.scrollTo({ top: viewport.current.scrollHeight, behavior: 'smooth' });
   };
 
+  // Функции для механической прокрутки
+  const scrollUp = () => {
+    // Прокручиваем на 100px вверх
+    viewport.current?.scrollBy({ top: -100, behavior: 'smooth' });
+  };
+
+  const scrollDown = () => {
+    // Прокручиваем на 100px вниз
+    viewport.current?.scrollBy({ top: 100, behavior: 'smooth' });
+  };
   // --- ЛОГИКА РАБОТЫ С LOCALSTORAGE ---
 
   // <-- 2. Добавляем useEffect для чтения ID вакансии из HTML
@@ -139,20 +149,18 @@ function ChatWidget({ onClose }) {
   };
 
   return (
-    <Card
-      shadow="xl"
-      p="lg"
-      radius="md"
-      withBorder
-      style={{ width: 350, height: 500, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-    >
+    <Card shadow="xl" p="lg" radius="md" withBorder style={{ width: 350, height: 500, display: 'flex', flexDirection: 'column', overscrollBehavior: 'contain' }}>
       <Group position="apart" mb="md">
         <Text weight={500}>Чат-поддержка</Text>
-        <ActionIcon onClick={onClose}><IconX size={16} /></ActionIcon>
+        <Group spacing="xs" noWrap>
+          <ActionIcon onClick={scrollUp} title="Прокрутить вверх"><IconArrowUp size={16} /></ActionIcon>
+          <ActionIcon onClick={scrollDown} title="Прокрутить вниз"><IconArrowDown size={16} /></ActionIcon>
+          <ActionIcon onClick={onClose} title="Закрыть чат"><IconX size={16} /></ActionIcon>
+        </Group>
       </Group>
 
-      {/* Message Area: The key is to make this a flex item that can shrink and has its own overflow handling. */}
-      <ScrollArea style={{ flex: '1 1 0', minHeight: 0, marginBottom: '10px' }} viewportRef={viewport}>
+      {/* Область с сообщениями */}
+      <ScrollArea style={{ flex: 1, marginBottom: '10px' }} viewportRef={viewport}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {messages.map((msg, index) => <Message key={index} message={msg} />)}
         </div>
