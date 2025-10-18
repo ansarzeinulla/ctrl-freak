@@ -28,28 +28,35 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             
-            # --- НАЧАЛО ИЗМЕНЕНИЙ ---
+            # --- НАЧАЛО ИЗМЕНЕНИЙ ---            
+            try:
+                # Парсим входящие данные как JSON
+                incoming_data = json.loads(data)
+                message_text = incoming_data.get("text", "")
+                vacancy_id = incoming_data.get("vacancy_id") # Получаем ID вакансии
+                resume_id = incoming_data.get("resume_id")   # Получаем ID резюме
+            except json.JSONDecodeError:
+                # Если пришел не JSON, обрабатываем как обычный текст для обратной совместимости
+                message_text = data
+                vacancy_id = None
+                resume_id = None
 
             # Проверяем, прислал ли клиент команду для завершения
-            if data.lower().strip() == "bye":
-                # Если да, готовим ответ с флагом finish_conversation: True
+            if message_text.lower().strip() == "bye":
                 response = {
                     "message": "Диалог завершен. Спасибо!",
                     "finish_conversation": True
                 }
-                # Отправляем JSON-строку
                 await websocket.send_text(json.dumps(response))
-                # Выходим из цикла, что приведет к закрытию соединения
                 break 
             
             # Если это обычное сообщение
             else:
-                # Готовим стандартный ответ с флагом finish_conversation: False
+                # Формируем ответ, включая полученный vacancy_id
                 response = {
-                    "message": f"Бэкенд получил: '{data}'",
+                    "message": f"Бэкенд получил: '{message_text}' для вакансии ID: {vacancy_id} и резюме ID: {resume_id}",
                     "finish_conversation": False
                 }
-                # Отправляем JSON-строку
                 await websocket.send_text(json.dumps(response))
 
             # --- КОНЕЦ ИЗМЕНЕНИЙ ---

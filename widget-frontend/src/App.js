@@ -32,6 +32,8 @@ function ChatWidget({ onClose }) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isFinished, setIsFinished] = useState(false);
+  const [vacancyId, setVacancyId] = useState(null); // <-- 1. Добавляем состояние для ID вакансии
+  const [resumeId, setResumeId] = useState(null); // <-- Новое состояние для ID резюме
   const socket = useRef(null);
   const viewport = useRef(null); // Для авто-прокрутки
 
@@ -41,6 +43,25 @@ function ChatWidget({ onClose }) {
   };
 
   // --- ЛОГИКА РАБОТЫ С LOCALSTORAGE ---
+
+  // <-- 2. Добавляем useEffect для чтения ID вакансии из HTML
+  useEffect(() => {
+    const vacancyElement = document.getElementById('vacancy-id');
+    if (vacancyElement) {
+      setVacancyId(vacancyElement.value);
+      console.log("Найден ID вакансии:", vacancyElement.value);
+    } else {
+      console.warn("Элемент с id 'vacancy-id' не найден на странице.");
+    }
+
+    const resumeElement = document.getElementById('resume-id');
+    if (resumeElement) {
+      setResumeId(resumeElement.value);
+      console.log("Найден ID резюме:", resumeElement.value);
+    } else {
+      console.warn("Элемент с id 'resume-id' не найден на странице.");
+    }
+  }, []); // Пустой массив зависимостей, чтобы выполнилось один раз при монтировании
 
   // 1. ЗАГРУЗКА истории из localStorage при открытии виджета
   useEffect(() => {
@@ -91,8 +112,14 @@ function ChatWidget({ onClose }) {
     const userMessage = { text: inputValue, sender: 'user' };
     setMessages(prev => [...prev, userMessage]);
     
+    // <-- 3. Формируем и отправляем JSON вместо простого текста
     if (socket.current.readyState === WebSocket.OPEN) {
-      socket.current.send(inputValue);
+      const messagePayload = {
+        text: inputValue,
+        vacancy_id: vacancyId, // Добавляем ID вакансии в отправляемые данные
+        resume_id: resumeId // Добавляем ID резюме
+      };
+      socket.current.send(JSON.stringify(messagePayload));
     }
     setInputValue('');
   };
