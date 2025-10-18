@@ -1,0 +1,35 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    container_name: ctrl-freak-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app # Mount backend code for hot-reloading
+    env_file:
+      - .env # Load environment variables from .env file
+    environment:
+      - DOCKER_DB_HOST=host.docker.internal
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    # This allows the container to connect to services running on the host machine
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    # ... (no changes to the frontend service)
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    container_name: ctrl-freak-frontend
+    ports:
+      - "8080:80"
+    volumes:
+      # 1. Mount your main index.html as the root page
+      - ./index.html:/usr/share/nginx/html/index.html
+      # 2. Mount the widget folder so the JS files can be found
+      - ./widget-frontend:/usr/share/nginx/html/widget-frontend
+    environment:
+      # This variable will be used by nginx to replace a placeholder in the JS file
+      - REACT_APP_WEBSOCKET_URL=ws://localhost:8000/ws

@@ -5,8 +5,8 @@ import json # <-- Добавлен импорт для работы с JSON
 import os
 
 # --- Imports from our project ---
-from .db import get_db_connection, fetch_record_as_dict
-from .ai import generate_ai_response
+from db import get_db_connection, fetch_record_as_dict
+from ai import generate_ai_response
 
 app = FastAPI()
 

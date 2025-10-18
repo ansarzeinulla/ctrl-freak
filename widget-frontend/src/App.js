@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { MantineProvider, Card, Text, Button, TextInput, Paper, ActionIcon, Group, ScrollArea } from '@mantine/core'; // prettier-ignore
 import { IconX, IconMessageCircle, IconSend, IconArrowUp, IconArrowDown } from '@tabler/icons-react';
 
-const WS_URL = 'ws://localhost:8000/ws';
+const WS_URL = process.env.REACT_APP_WEBSOCKET_URL || 'ws://localhost:8000/ws';
 
 // === Компонент одного сообщения в чате ===
 function Message({ message }) {

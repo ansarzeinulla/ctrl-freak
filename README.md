@@ -55,3 +55,6 @@ ctrl-freak/
     python -m http.server 8080
     ```
     You can now access the `index.html` page at `http://localhost:8080`.
+
+
+just docker-compose up --build

@@ -1,11 +1,13 @@
 import psycopg2
+import os
 
 # --- Your database credentials ---
+# Use host.docker.internal if running in docker, otherwise localhost
 db_params = {
     "database": "remotedb",
     "user": "postgres",
     "password": "",
-    "host": "127.0.0.1",
+    "host": os.environ.get("DOCKER_DB_HOST", "127.0.0.1"),
     "port": "5432"
 }
 
