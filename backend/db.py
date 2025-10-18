@@ -39,36 +39,28 @@ def get_record_by_id(cursor, table_name, record_id):
         # It's good practice to roll back in case of an error
         cursor.connection.rollback()
 
+def fetch_record_as_dict(cursor, table_name, record_id):
+    """
+    Fetches a single record by ID and returns it as a dictionary.
+    """
+    try:
+        query = f"SELECT * FROM {table_name} WHERE id = %s;"
+        cursor.execute(query, (record_id,))
+        record = cursor.fetchone()
 
-# --- Main script execution ---
-conn = None  # Initialize conn to None
-try:
-    # Establish a connection to the database
+        if not record:
+            return None
+
+        column_names = [desc[0] for desc in cursor.description]
+        return dict(zip(column_names, record))
+
+    except psycopg2.Error as e:
+        print(f"An error occurred while fetching from '{table_name}': {e}")
+        # It's good practice to roll back in case of an error
+        cursor.connection.rollback()
+        return None
+
+def get_db_connection():
+    """Establishes and returns a database connection and cursor."""
     conn = psycopg2.connect(**db_params)
-    cur = conn.cursor()
-
-    # --- Get Vacancy Details ---
-    vacancy_id_input = input("Enter the ID of the VACANCY you want to view: ")
-    vacancy_id = int(vacancy_id_input) # Convert input to an integer
-    get_record_by_id(cur, "vacancies", vacancy_id)
-
-    # --- Get Resume Details ---
-    # IMPORTANT: We are assuming your resumes table is named 'resumes'.
-    # If it has a different name, change it in the line below.
-    resume_table_name = "resumes" 
-    resume_id_input = input(f"\nEnter the ID of the RESUME you want to view (from '{resume_table_name}' table): ")
-    resume_id = int(resume_id_input) # Convert input to an integer
-    get_record_by_id(cur, resume_table_name, resume_id)
-
-
-except ValueError:
-    print("\nError: Invalid ID. Please enter a number.")
-except psycopg2.Error as e:
-    print(f"\nDatabase connection error: {e}")
-finally:
-    # Close the cursor and the connection if they were successfully created
-    if 'cur' in locals() and cur:
-        cur.close()
-    if conn:
-        conn.close()
-        print("\n\nDatabase connection closed.")
+    return conn, conn.cursor()

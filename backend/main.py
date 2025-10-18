@@ -2,6 +2,10 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import json # <-- Добавлен импорт для работы с JSON
+import os
+
+# --- Imports from our project ---
+from .db import get_db_connection, fetch_record_as_dict # AI import removed
 
 app = FastAPI()
 
@@ -24,6 +28,8 @@ def get_hello_message():
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    db_conn, db_cursor = None, None # Initialize here to use in finally
+
     try:
         while True:
             data = await websocket.receive_text()
@@ -50,15 +56,32 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_text(json.dumps(response))
                 break 
             
-            # Если это обычное сообщение
-            else:
-                # Формируем ответ, включая полученный vacancy_id
+            # --- NEW LOGIC: Fetch from DB and return data ---
+            if vacancy_id and resume_id:
+                # Establish DB connection for this message
+                db_conn, db_cursor = get_db_connection()
+
+                # Fetch records from the database
+                vacancy_data = fetch_record_as_dict(db_cursor, "vacancies", vacancy_id)
+                resume_data = fetch_record_as_dict(db_cursor, "resumes", resume_id)
+                print(f"Fetched vacancy data: {vacancy_data}")
+                print(f"Fetched resume data: {resume_data}")
+                if vacancy_data and resume_data:
+                    # Combine the fetched data into a single object for the response.
+                    # We use json.dumps with default=str to handle data types like dates.
+                    # ensure_ascii=False is key for sending Cyrillic characters directly.
+                    response_message = json.dumps({
+                        "vacancy": vacancy_data,
+                        "resume": resume_data
+                    }, indent=2, default=str, ensure_ascii=False)
+                else:
+                    response_message = "Could not find the vacancy or resume details in the database." # Keep this error message
+
                 response = {
-                    "message": f"Бэкенд получил: '{message_text}' для вакансии ID: {vacancy_id} и резюме ID: {resume_id}",
+                    "message": response_message,
                     "finish_conversation": False
                 }
                 await websocket.send_text(json.dumps(response))
-
             # --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     except WebSocketDisconnect:
@@ -66,7 +89,12 @@ async def websocket_endpoint(websocket: WebSocket):
         print("Клиент отключился.")
     except Exception as e:
         print(f"Произошла ошибка: {e}")
-    # finally блок здесь не нужен, FastAPI закроет соединение при выходе из функции
+    finally:
+        # Ensure the database connection is closed
+        if db_cursor:
+            db_cursor.close()
+        if db_conn:
+            db_conn.close()
 
 # Чтобы можно было запустить как обычный скрипт
 if __name__ == "__main__":

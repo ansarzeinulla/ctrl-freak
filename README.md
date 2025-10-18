@@ -43,13 +43,15 @@ ctrl-freak/
     Open a terminal, navigate to the project root, and run:
     ```bash
     uvicorn backend.main:app --reload --port 8000
+
+    newer version: PYTHONIOENCODING=UTF-8 uvicorn backend.main:app --reload --port 8000
     ```
     This will start the FastAPI backend server on `http://127.0.0.1:8000`.
 
 2.  **Serve the Frontend:**
     Open a *second* terminal, navigate to the `frontend` directory, and run a simple HTTP server:
     ```bash
-    cd frontend
+
     python -m http.server 8080
     ```
     You can now access the `index.html` page at `http://localhost:8080`.
