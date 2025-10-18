@@ -27,32 +27,32 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            
-            # --- НАЧАЛО ИЗМЕНЕНИЙ ---
+            # The frontend will now send a JSON string. We need to parse it.
+            received_data = json.loads(data)
 
-            # Проверяем, прислал ли клиент команду для завершения
-            if data.lower().strip() == "bye":
-                # Если да, готовим ответ с флагом finish_conversation: True
+            # Extract data from the received JSON
+            user_message = received_data.get("message", "")
+            vacancy_id = received_data.get("vacancyId")
+            resume_id = received_data.get("resumeId")
+
+            # Check if the client sent a command to end the conversation
+            if user_message.lower().strip() == "bye":
                 response = {
                     "message": "Диалог завершен. Спасибо!",
                     "finish_conversation": True
                 }
-                # Отправляем JSON-строку
                 await websocket.send_text(json.dumps(response))
-                # Выходим из цикла, что приведет к закрытию соединения
-                break 
-            
-            # Если это обычное сообщение
+                break
             else:
-                # Готовим стандартный ответ с флагом finish_conversation: False
+                # For a regular message, prepare a standard response
+                # We mirror back the IDs we received
                 response = {
-                    "message": f"Бэкенд получил: '{data}'",
-                    "finish_conversation": False
+                    "message": f"Бэкенд получил: '{user_message}'",
+                    "finish_conversation": False,
+                    "vacancyId": vacancy_id,
+                    "resumeId": resume_id
                 }
-                # Отправляем JSON-строку
                 await websocket.send_text(json.dumps(response))
-
-            # --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     except WebSocketDisconnect:
         # Эта секция более корректно отлавливает закрытие вкладки браузера
