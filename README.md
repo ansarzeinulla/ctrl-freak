@@ -57,4 +57,11 @@ ctrl-freak/
     You can now access the `index.html` page at `http://localhost:8080`.
 
 
-just docker-compose up --build
+
+
+NEW NEW
+docker-compose up --build
+
+
+
+to see dashboard just cd employer and python app.py. it will open a dashboard on anothre page (this procedure is not in docker)
