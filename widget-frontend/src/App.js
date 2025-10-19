@@ -34,6 +34,7 @@ function ChatWidget({ onClose }) {
   const [isFinished, setIsFinished] = useState(false);
   const [vacancyId, setVacancyId] = useState(null); // <-- 1. Добавляем состояние для ID вакансии
   const [resumeId, setResumeId] = useState(null); // <-- Новое состояние для ID резюме
+  const [topVisibleIndex, setTopVisibleIndex] = useState(0); // Track the top visible message
   const socket = useRef(null);
   const viewport = useRef(null); // Для авто-прокрутки
 
@@ -44,14 +45,17 @@ function ChatWidget({ onClose }) {
 
   // Функции для механической прокрутки
   const scrollUp = () => {
-    // Прокручиваем на 100px вверх
-    viewport.current?.scrollBy({ top: -100, behavior: 'smooth' });
+    // "Scroll up" by revealing the message above
+    setTopVisibleIndex((prevIndex) => (prevIndex > 0 ? prevIndex - 1 : 0));
   };
 
   const scrollDown = () => {
-    // Прокручиваем на 100px вниз
-    viewport.current?.scrollBy({ top: 100, behavior: 'smooth' });
+    // "Scroll down" by hiding the top message
+    setTopVisibleIndex((prevIndex) =>
+      prevIndex < messages.length - 1 ? prevIndex + 1 : prevIndex
+    );
   };
+
   // --- ЛОГИКА РАБОТЫ С LOCALSTORAGE ---
 
   // <-- 2. Добавляем useEffect для чтения ID вакансии из HTML
@@ -87,10 +91,15 @@ function ChatWidget({ onClose }) {
 
   // 2. СОХРАНЕНИЕ истории в localStorage при любом изменении
   useEffect(() => {
+    // This effect handles saving to localStorage and auto-scrolling.
     localStorage.setItem('chat_messages', JSON.stringify(messages));
     localStorage.setItem('chat_finished', isFinished);
+
+    // When a new message is added, we want to see it.
+    // This resets our "mechanical scroll" to show the latest messages.
     if (messages.length > 0) {
-      scrollToBottom();
+      setTopVisibleIndex(0); // Reset to show from the top
+      setTimeout(scrollToBottom, 0); // Scroll to bottom for new messages
     }
   }, [messages, isFinished]);
 
@@ -160,9 +169,28 @@ function ChatWidget({ onClose }) {
       </Group>
 
       {/* Область с сообщениями */}
-      <ScrollArea style={{ flex: 1, marginBottom: '10px' }} viewportRef={viewport}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {messages.map((msg, index) => <Message key={index} message={msg} />)}
+      <ScrollArea
+        style={{ flex: 1, minHeight: 0, marginBottom: '10px' }} // minHeight: 0 is crucial for flexbox scrolling
+        viewportRef={viewport}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+          }}>
+          {messages.map((msg, index) => {
+            // Determine if the message should be visible based on the mechanical scroll index
+            const isVisible = index >= topVisibleIndex;
+            const messageStyle = isVisible
+              ? {}
+              : { height: 0, margin: 0, padding: 0, overflow: 'hidden', border: 'none' };
+
+            // We wrap the Message in a div to apply the height style without affecting the Message component itself.
+            return (
+              <div key={`${index}-${msg.text.slice(0, 10)}`} style={messageStyle}><Message message={msg} /></div>
+            );
+          })}
         </div>
       </ScrollArea>
 
