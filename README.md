@@ -64,6 +64,10 @@ These instructions are for running the services directly on your host machine. T
 This is the recommended method for building and running the application. It uses Docker to create a consistent and isolated environment for each service.
 
 1.  **Build and run the services:**
+
+ATTENTOIN: in .env of parent directory you must have # Your Google API Key for the AI service
+GOOGLE_API_KEY="Your Google API Key from ai.studio "
+
     ```bash
     docker-compose up --build
     ```
