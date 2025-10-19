@@ -36,7 +36,11 @@ class MyHttpRequestHandler(http.server.BaseHTTPRequestHandler):
 
                 vacancy_id = int(data['vacancy_id'])
                 results = retrieve_results_by_vacancy(vacancy_id)
-                self._send_json_response({'results': results})
+                # The retrieve function now returns a list of dicts, which is perfect for a JSON response.
+                # The results are already sorted by score.
+                logging.info(f"Retrieved {len(results)} results for vacancy_id {vacancy_id}. Sending to client.")
+                logging.debug(f"Data: {results}") # More detailed log for debugging
+                self._send_json_response(results)
 
             except ValueError:
                 self._send_json_response({'error': 'Invalid vacancy_id provided. It must be a number.'}, status_code=400)
@@ -51,7 +55,7 @@ class MyHttpRequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_response(status_code)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
-        self.wfile.write(json.dumps(data).encode('utf-8'))
+        self.wfile.write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
 
 if __name__ == '__main__':
     # We need to change the directory so the server can find the templates folder

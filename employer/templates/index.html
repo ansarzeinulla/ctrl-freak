@@ -52,15 +52,52 @@
         button:hover {
             background-color: #2980b9;
         }
-        #results {
-            background-color: #2c3e50;
-            color: #fdfdfd;
-            padding: 1.5em;
+        .table-container {
+            overflow-x: auto; /* Enables horizontal scrolling */
+            margin-top: 1em;
+            border: 1px solid #ddd;
             border-radius: 4px;
-            white-space: pre-wrap; /* Allows text to wrap and preserves whitespace */
-            word-wrap: break-word;
-            font-family: "Menlo", "Monaco", "Consolas", "Courier New", monospace;
-            min-height: 50px;
+        }
+        #results-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px; /* Force a minimum width to demonstrate scrolling */
+        }
+        #results-table th, #results-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+            vertical-align: top;
+        }
+        #results-table th {
+            background-color: #34495e;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        #results-table tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        #results-table tbody tr:hover {
+            background-color: #e9ecef;
+        }
+        .score-cell {
+            font-weight: bold;
+            font-size: 1.2em;
+            text-align: center;
+            width: 80px;
+        }
+        .reasons-list {
+            padding-left: 20px;
+            margin: 0;
+        }
+        #results-placeholder {
+            text-align: center;
+            color: #777;
+            padding: 2em;
+            border: 2px dashed #ddd;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -72,24 +109,66 @@
             <button type="submit">Submit</button>
         </form>
         <h2>Results</h2>
-        <pre id="results">Results will be displayed here...</pre>
+        <div id="results-container">
+            <div id="results-placeholder">Results will be displayed here...</div>
+            <div class="table-container" style="display: none;">
+                <table id="results-table">
+                    <thead>
+                        <tr>
+                            <th>Score</th>
+                            <th>Resume ID</th>
+                            <th>Summary</th>
+                            <th>Reasons for Mismatch</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body">
+                        <!-- Rows will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>
         document.getElementById('vacancy-form').addEventListener('submit', async function(event) {
             event.preventDefault();
             const vacancyId = document.getElementById('vacancy_id').value;
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.textContent = 'Loading...';
+            const tableContainer = document.querySelector('.table-container');
+            const tableBody = document.getElementById('results-body');
+            const placeholder = document.getElementById('results-placeholder');
+
+            placeholder.textContent = 'Loading...';
+            placeholder.style.display = 'block';
+            tableContainer.style.display = 'none';
+            tableBody.innerHTML = ''; // Clear previous results
 
             const response = await fetch('/retrieve', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ vacancy_id: vacancyId })
             });
-
+            
             const data = await response.json();
-            resultsDiv.textContent = data.results || data.error;
+
+            if (response.ok) {
+                if (Array.isArray(data) && data.length > 0) {
+                    data.forEach(result => {
+                        const row = tableBody.insertRow();
+                        row.innerHTML = `
+                            <td class="score-cell">${result.score}%</td>
+                            <td>${result.resume_id}</td>
+                            <td>${result.summary}</td>
+                            <td>${Array.isArray(result.reasons) ? `<ul class="reasons-list"><li>${result.reasons.join('</li><li>')}</li></ul>` : result.reasons}</td>
+                        `;
+                    });
+                    placeholder.style.display = 'none';
+                    tableContainer.style.display = 'block';
+                } else {
+                    placeholder.textContent = 'No results found for this vacancy ID.';
+                }
+            } else {
+                placeholder.textContent = `Error: ${data.error || 'An unknown error occurred.'}`;
+            }
         });
     </script>
 </body>

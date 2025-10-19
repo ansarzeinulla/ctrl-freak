@@ -104,20 +104,17 @@ async def websocket_endpoint(websocket: WebSocket):
                 try:
                     final_analysis = json.loads(cleaned_ai_response)
 
-                    if "suitability_score" in final_analysis and "mismatch_reasons" in final_analysis and "summary_for_employer" in final_analysis:
-                        # score = final_analysis["final_score"]
-                        # summary = final_analysis["summary"]
-                        # print(f"--- FINAL ANALYSIS COMPLETE ---")
-                        # print(f"Candidate Suitability Score: {score}%")
-                        # print(f"Summary: {summary}")
-
+                    score = final_analysis.get("suitability_score")
+                    reasons = final_analysis.get("mismatch_reasons")
+                    summary = final_analysis.get("summary_for_employer")
+                    
+                    if score is not None and reasons is not None and summary is not None:
                         # --- NEW: Save the result to the database ---
                         update_conn, update_cursor = None, None
                         try:
                             update_conn, update_cursor = get_db_connection()
-                            # Store the entire JSON analysis as the output
-                            output_to_save = json.dumps(final_analysis)
-                            insert_or_update_result(update_cursor, vacancy_id, resume_id, output_to_save)
+                            # Pass the separated fields to the database function
+                            insert_or_update_result(update_cursor, vacancy_id, resume_id, score, reasons, summary)
                             print("Successfully saved final analysis to the database.")
                         except Exception as e:
                             print(f"Failed to save result to database: {e}")
@@ -126,7 +123,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             if update_conn: update_conn.close()
                         # --- END NEW ---
 
-                        final_message = f"Analysis complete. Candidate suitability: {final_analysis['suitability_score']}%. {final_analysis['summary_for_employer']}"
+                        final_message = f"Analysis complete. Candidate suitability: {score}%. {summary}"
                         response = {"message": final_message, "finish_conversation": True}
                         await websocket.send_text(json.dumps(response))
                         break

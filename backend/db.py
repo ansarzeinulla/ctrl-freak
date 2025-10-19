@@ -67,26 +67,27 @@ def fetch_record_as_dict(cursor, table_name, record_id):
         cursor.connection.rollback()
         return None
 
-def insert_or_update_result(cursor, vacancy_id, resume_id, output):
+def insert_or_update_result(cursor, vacancy_id, resume_id, score, reasons, summary):
     """
     Inserts a new result into the 'results' table.
     If a result with the same vacancy_id and resume_id already exists,
-    it updates the output. This requires a UNIQUE constraint on (vacancy_id, resume_id).
+    it updates the score, reasons, and summary. This requires a UNIQUE
+    constraint on (vacancy_id, resume_id).
     """
     try:
         logging.info(f"Attempting to insert/update result for vacancy_id: {vacancy_id}, resume_id: {resume_id}")
-        # Serialize the output dictionary into a JSON-formatted string.
-        # This string will be stored in a TEXT column in the database.
-        string_output = json.dumps(output, ensure_ascii=False)
+        # The 'reasons' might be a list, so we serialize it to a JSON string.
+        reasons_str = json.dumps(reasons, ensure_ascii=False)
+
         # UPSERT query: Insert or update on conflict
         query = """
-            INSERT INTO results (vacancy_id, resume_id, output)
-            VALUES (%s, %s, %s)
+            INSERT INTO results (vacancy_id, resume_id, score, reasons, summary)
+            VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (vacancy_id, resume_id)
-            DO UPDATE SET output = EXCLUDED.output;
+            DO UPDATE SET score = EXCLUDED.score, reasons = EXCLUDED.reasons, summary = EXCLUDED.summary;
         """
         
-        cursor.execute(query, (vacancy_id, resume_id, string_output))
+        cursor.execute(query, (vacancy_id, resume_id, score, reasons_str, summary))
         cursor.connection.commit()
         logging.info(f"Successfully saved result for vacancy_id: {vacancy_id}, resume_id: {resume_id}")
 
