@@ -11,14 +11,24 @@ from ai import generate_ai_response
 
 app = FastAPI()
 
-# IMPORTANT: For quick setup, all origins are allowed (CORS)
-# This is not secure for a real-world project!
+# --- CORS Configuration ---
+# Мы явно указываем, с каких адресов можно делать запросы к нашему API.
+# Это гораздо безопаснее, чем разрешать всем ("*").
+origins = [
+    "http://localhost:8080",  # Адрес, на котором работает фронтенд-виджет
+    "http://127.0.0.1:8080", # Иногда браузеры используют этот адрес вместо localhost
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=origins,
+    allow_credentials=True,  # Разрешает отправку cookies и заголовков авторизации
+    allow_methods=["GET", "POST", "OPTIONS"],  # Явно разрешаем только нужные методы
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Accept",
+    ],  # Явно разрешаем заголовки
 )
 
 # Simple HTTP GET endpoint

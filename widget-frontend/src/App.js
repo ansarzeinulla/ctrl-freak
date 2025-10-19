@@ -59,23 +59,20 @@ function ChatWidget({ onClose }) {
   // --- ЛОГИКА РАБОТЫ С LOCALSTORAGE ---
 
   // <-- 2. Добавляем useEffect для чтения ID вакансии из HTML
+  // Читаем data-атрибуты из <div id="root">, в который монтируется приложение
   useEffect(() => {
-    const vacancyElement = document.getElementById('vacancy-id');
-    if (vacancyElement) {
-      setVacancyId(vacancyElement.value);
-      console.log("Найден ID вакансии:", vacancyElement.value);
+    const rootElement = document.getElementById('root');
+    if (rootElement) {
+      const vacancy = rootElement.getAttribute('data-vacancy-id');
+      const resume = rootElement.getAttribute('data-resume-id');
+      setVacancyId(vacancy);
+      setResumeId(resume);
+      console.log("Найден ID вакансии:", vacancy);
+      console.log("Найден ID резюме:", resume);
     } else {
-      console.warn("Элемент с id 'vacancy-id' не найден на странице.");
+      console.warn("Корневой элемент <div id='root'> не найден. Не удалось прочитать ID.");
     }
-
-    const resumeElement = document.getElementById('resume-id');
-    if (resumeElement) {
-      setResumeId(resumeElement.value);
-      console.log("Найден ID резюме:", resumeElement.value);
-    } else {
-      console.warn("Элемент с id 'resume-id' не найден на странице.");
-    }
-  }, []); // Пустой массив зависимостей, чтобы выполнилось один раз при монтировании
+  }, []); // Пустой массив зависимостей, чтобы выполнилось один раз
 
   // 1. ЗАГРУЗКА истории из localStorage при открытии виджета
   useEffect(() => {
