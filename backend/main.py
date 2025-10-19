@@ -31,6 +31,14 @@ app.add_middleware(
     ],  # Явно разрешаем заголовки
 )
 
+# --- NEW: Health Check Endpoint ---
+@app.get("/health")
+def health_check():
+    """
+    Handles GET requests to the /health endpoint.
+    """
+    return {"status": "ok"}
+
 # Simple HTTP GET endpoint
 @app.get("/api/hello")
 def get_hello_message():
@@ -85,15 +93,23 @@ async def websocket_endpoint(websocket: WebSocket):
                 history_str = "\n".join(conversation_history)
 
                 ai_response_text = generate_ai_response(api_key, vacancy_str, resume_str, history_str)
+                
+                # Clean the AI response to remove markdown code fences if they exist
+                cleaned_ai_response = ai_response_text.strip()
+                if cleaned_ai_response.startswith("```json"):
+                    cleaned_ai_response = cleaned_ai_response[7:].strip()
+                if cleaned_ai_response.endswith("```"):
+                    cleaned_ai_response = cleaned_ai_response[:-3].strip()
 
                 try:
-                    final_analysis = json.loads(ai_response_text)
-                    if "final_score" in final_analysis and "summary" in final_analysis:
-                        score = final_analysis["final_score"]
-                        summary = final_analysis["summary"]
-                        print(f"--- FINAL ANALYSIS COMPLETE ---")
-                        print(f"Candidate Suitability Score: {score}%")
-                        print(f"Summary: {summary}")
+                    final_analysis = json.loads(cleaned_ai_response)
+
+                    if "suitability_score" in final_analysis and "mismatch_reasons" in final_analysis and "summary_for_employer" in final_analysis:
+                        # score = final_analysis["final_score"]
+                        # summary = final_analysis["summary"]
+                        # print(f"--- FINAL ANALYSIS COMPLETE ---")
+                        # print(f"Candidate Suitability Score: {score}%")
+                        # print(f"Summary: {summary}")
 
                         # --- NEW: Save the result to the database ---
                         update_conn, update_cursor = None, None
@@ -110,7 +126,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             if update_conn: update_conn.close()
                         # --- END NEW ---
 
-                        final_message = f"Analysis complete. Candidate suitability: {score}%. {summary}"
+                        final_message = f"Analysis complete. Candidate suitability: {final_analysis['suitability_score']}%. {final_analysis['summary_for_employer']}"
                         response = {"message": final_message, "finish_conversation": True}
                         await websocket.send_text(json.dumps(response))
                         break
@@ -118,7 +134,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     else:
                         raise json.JSONDecodeError("Not final analysis format", ai_response_text, 0)
                 except json.JSONDecodeError:
-                    bot_question = ai_response_text.strip()
+                    bot_question = cleaned_ai_response.strip()
                     conversation_history.append(f"AI Assistant: {bot_question}")
                     response = {"message": bot_question, "finish_conversation": False}
                     await websocket.send_text(json.dumps(response))

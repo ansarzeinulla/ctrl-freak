@@ -65,3 +65,6 @@ docker-compose up --build
 
 
 to see dashboard just cd employer and python app.py. it will open a dashboard on anothre page (this procedure is not in docker)
+
+HEALTH CHECK
+curl http://localhost:8000/health
