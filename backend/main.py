@@ -1,17 +1,18 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-import json # <-- Добавлен импорт для работы с JSON
+import json
 import os
 
 # --- Imports from our project ---
-from db import get_db_connection, fetch_record_as_dict
+# Make sure to import the new function
+from db import get_db_connection, fetch_record_as_dict, insert_or_update_result
 from ai import generate_ai_response
 
 app = FastAPI()
 
-# ВАЖНО: для "тяп-ляп" разрешаем все источники (CORS)
-# В реальном проекте так делать нельзя!
+# IMPORTANT: For quick setup, all origins are allowed (CORS)
+# This is not secure for a real-world project!
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,12 +21,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Простой HTTP GET эндпоинт
+# Simple HTTP GET endpoint
 @app.get("/api/hello")
 def get_hello_message():
-    return {"message": "Привет от FastAPI!"}
+    return {"message": "Hello from FastAPI!"}
 
-# Эндпоинт для WebSocket
+# WebSocket endpoint
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -33,7 +34,6 @@ async def websocket_endpoint(websocket: WebSocket):
     conversation_history = []
     api_key = os.environ.get("GOOGLE_API_KEY")
     if not api_key:
-        # Handle missing API key gracefully
         error_response = {
             "message": "Server configuration error: AI service is unavailable.",
             "finish_conversation": True
@@ -51,7 +51,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 vacancy_id = incoming_data.get("vacancy_id")
                 resume_id = incoming_data.get("resume_id")
             except json.JSONDecodeError:
-                # Handle malformed JSON or non-JSON messages
                 await websocket.send_text(json.dumps({"message": "Invalid data format.", "finish_conversation": True}))
                 break
 
@@ -59,8 +58,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_text(json.dumps({"message": "Vacancy or Resume ID is missing.", "finish_conversation": True}))
                 break
 
-            # Append user's message to history (if it's not the initial trigger)
-            if user_message and user_message != "start":
+            if user_message and user_message.lower() != "start":
                 conversation_history.append(f"Candidate: {user_message}")
 
             try:
@@ -72,15 +70,12 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_text(json.dumps({"message": "Could not find vacancy or resume details.", "finish_conversation": True}))
                     break
 
-                # Convert DB records to string for the AI prompt
                 vacancy_str = json.dumps(vacancy_data, default=str, indent=2)
                 resume_str = json.dumps(resume_data, default=str, indent=2)
                 history_str = "\n".join(conversation_history)
 
-                # Call the AI service
                 ai_response_text = generate_ai_response(api_key, vacancy_str, resume_str, history_str)
 
-                # Check if the AI response is a final score in JSON format
                 try:
                     final_analysis = json.loads(ai_response_text)
                     if "final_score" in final_analysis and "summary" in final_analysis:
@@ -90,23 +85,35 @@ async def websocket_endpoint(websocket: WebSocket):
                         print(f"Candidate Suitability Score: {score}%")
                         print(f"Summary: {summary}")
 
-                        # Send final message and close conversation
+                        # --- NEW: Save the result to the database ---
+                        update_conn, update_cursor = None, None
+                        try:
+                            update_conn, update_cursor = get_db_connection()
+                            # Store the entire JSON analysis as the output
+                            output_to_save = json.dumps(final_analysis)
+                            insert_or_update_result(update_cursor, vacancy_id, resume_id, output_to_save)
+                            print("Successfully saved final analysis to the database.")
+                        except Exception as e:
+                            print(f"Failed to save result to database: {e}")
+                        finally:
+                            if update_cursor: update_cursor.close()
+                            if update_conn: update_conn.close()
+                        # --- END NEW ---
+
                         final_message = f"Analysis complete. Candidate suitability: {score}%. {summary}"
                         response = {"message": final_message, "finish_conversation": True}
                         await websocket.send_text(json.dumps(response))
-                        break # Exit the while loop
+                        break
+
                     else:
-                        # It's JSON but not the format we want, treat as a regular question
                         raise json.JSONDecodeError("Not final analysis format", ai_response_text, 0)
                 except json.JSONDecodeError:
-                    # AI returned a question, not a final score
                     bot_question = ai_response_text.strip()
                     conversation_history.append(f"AI Assistant: {bot_question}")
                     response = {"message": bot_question, "finish_conversation": False}
                     await websocket.send_text(json.dumps(response))
 
             finally:
-                # Close DB connection for this message cycle
                 if db_cursor:
                     db_cursor.close()
                 if db_conn:
@@ -117,16 +124,13 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"An error occurred in the WebSocket: {e}")
     finally:
-        # Final cleanup if connection was left open due to an error
         if db_cursor:
             db_cursor.close()
         if db_conn:
             db_conn.close()
         print("WebSocket connection closed.")
 
-# Чтобы можно было запустить как обычный скрипт
 if __name__ == "__main__":
-    # Ensure the API key is available on startup
     if not os.environ.get("GOOGLE_API_KEY"):
         print("WARNING: GOOGLE_API_KEY environment variable not set. AI features will fail.")
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
