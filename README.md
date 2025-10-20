@@ -26,15 +26,15 @@ These instructions are for running the services directly on your host machine. T
 1.  **Create and activate a virtual environment:**
     A virtual environment isolates the project's Python dependencies.
     ```bash
-    python -m venv venv
+    python -m venv .venv
     ```
     *   On macOS/Linux:
         ```bash
-        source venv/bin/activate
+        source .venv/bin/activate
         ```
     *   On Windows:
         ```bash
-        .\venv\Scripts\activate
+        .\.venv\Scripts\activate
         ```
 
 2.  **Install dependencies:**
